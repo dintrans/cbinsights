@@ -1,0 +1,5 @@
+# Python requirements for the project
+
+flask==2.0.1 #may2021
+cachetools==4.2.2 #apr2021
+python-dotenv==0.17.1 #apr2021
