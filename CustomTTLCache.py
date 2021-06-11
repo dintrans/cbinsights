@@ -9,8 +9,8 @@ class CustomTTLCache(TTLCache):
     """Cache implementation with per-item time-to-live (TTL) value, support for FIFO, LIFO and Reject insertion policies."""
 
     eviction_policy_options = {
-        'FIFO': lambda _ : Cache.__delitem__(self, self.__root.next),
-        'LIFO': lambda _ : Cache.__delitem__(self, self.__root.prev),
+        'FIFO': lambda n : Cache.__delitem__(n, n._TTLCache__root.next.key),
+        'LIFO': lambda n : Cache.__delitem__(n, n._TTLCache__root.prev.key),
         'Reject': lambda _ : (_ for _ in ()).throw(ValueError), #hacky solution to raise a ValueError inside a lambda
     } 
 
@@ -24,7 +24,7 @@ class CustomTTLCache(TTLCache):
         if self.currsize >= (self.maxsize):
             print('do eviction_policy')
             print(self.__eviction_policy)
-            self.eviction_policy_options[self.__eviction_policy](0)
+            self.eviction_policy_options[self.__eviction_policy](self)
         with self._TTLCache__timer as time:
             self.expire(time)
             cache_setitem(self, key, value)
