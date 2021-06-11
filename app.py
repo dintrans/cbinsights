@@ -36,36 +36,30 @@ def hello_world():
 @app.route("/object/<int:key>", methods=['GET','POST','PUT','DELETE'])
 def object(key):
     if request.method == 'GET':
-        return f'<p>Yes, the number {key}</p>'
+        try:
+            c = cache.__getitem__(key)
+        except KeyError:
+            return '404 Not found'
+        return c
     elif request.method == 'DELETE':
-        cache.__delitem__(key)
+        try:
+            cache.__delitem__(key)
+        except KeyError:
+            return '404 Not found'
+        return '200 OK'
     elif request.method in ['POST','PUT']:
         try:
             ttl = -1 if request.args.get('ttl','') is '' else int(request.args.get('ttl',''))
             value = json.dumps(json.loads(request.get_data()))
         except ValueError as e:
-            return "400 Bad Request"
-        print('TTL: '+str(ttl))
-        print(value)
-        cache.__setitem__(key,value,ttl)
+            return '400 Bad Request'
+        try:
+            cache.__setitem__(key,value,ttl)
+        except ValueError:
+            return '507 insuficient storage'
         return '200 OK'
-
-"""
-cache = {}
-
-@app.route("/create")
-def create():
-    cache['foo'] = 0
-    return jsonify(cache['foo'])
-
-@app.route("/increment")
-def increment():
-    cache['foo'] = cache['foo'] + 1
-    return jsonify(cache['foo'])
-
-@app.route("/read")
-def read():
-    return jsonify(cache['foo'])"""
+    else:
+        return '405 method not supported'
 
 if __name__ == '__main__':
     app.run()
