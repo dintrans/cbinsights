@@ -11,18 +11,24 @@ class CustomTTLCache(TTLCache):
     support for FIFO, LIFO and Reject eviction policies."""
 
     eviction_policy_options = {
-        'FIFO': lambda n: Cache.__delitem__(n, n._TTLCache__root.next.key),
-        'LIFO': lambda n: Cache.__delitem__(n, n._TTLCache__root.prev.key),
-        'Reject': lambda _: (_ for _ in ()).throw(ValueError)  # hackySolution
+        'FIFO': lambda n: n.__deleteitem__(n._TTLCache__root.next),
+        'LIFO': lambda n: n.__deleteitem__(n._TTLCache__root.prev),
+        'Reject': lambda _: (_ for _ in ()).throw(KeyError)  # hacky solution
     }
 
-    def __init__(self, maxsize, default_ttl, evctn_plc, timer=time.monotonic):
-        self.__eviction_policy = evctn_plc
+    def __init__(self, maxsize, default_ttl, evctn_plcy, timer=time.monotonic):
+        self.__eviction_policy = evctn_plcy
         super().__init__(maxsize, default_ttl, timer=timer, getsizeof=None)
 
     def __setitem__(self, key, value, ttl=-1, cache_setitem=Cache.__setitem__):
         if self.currsize >= (self.maxsize):
-            self.eviction_policy_options[self.__eviction_policy](self)
+            if key not in self._TTLCache__links:
+                self.eviction_policy_options[self.__eviction_policy](self)
+            else:
+                print('plas2')
+                print(self._TTLCache__links)
+                self.__deleteitem__(self._TTLCache__links[key])
+        print(self._TTLCache__links)
         with self._TTLCache__timer as time:
             self.expire(time)
             cache_setitem(self, key, value)
@@ -40,6 +46,7 @@ class CustomTTLCache(TTLCache):
         link.next = root = self._TTLCache__root
         link.prev = prev = root.prev
         prev.next = root.prev = link
+        print(self._TTLCache__links)
 
     def expire(self, time=None):
         """Remove expired items from the cache."""
@@ -52,7 +59,10 @@ class CustomTTLCache(TTLCache):
         while curr is not root:
             next = curr.next
             if curr.expire < time:
-                cache_delitem(self, curr.key)
-                del links[curr.key]
-                curr.unlink()
+                self.__deleteitem__(curr)
             curr = next
+
+    def __deleteitem__(self, item):
+        Cache.__delitem__(self, item.key)
+        del self._TTLCache__links[item.key]
+        item.unlink()

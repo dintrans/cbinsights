@@ -1,6 +1,6 @@
 import validators
 import config
-from flask import Flask, request
+from flask import Flask, request, Response
 from flask import json
 from CustomTtlCache import CustomTTLCache
 from dotenv import dotenv_values
@@ -37,8 +37,8 @@ def object_retrieve(key):
     try:
         c = cache[key]
     except KeyError:
-        return '404 Not found'
-    return c
+        return Response("", status=404)
+    return Response(c, status=200, mimetype='application/json')
 
 
 @app.route("/object/<int:key>", methods=['DELETE'])
@@ -46,8 +46,8 @@ def object_delete(key):
     try:
         del cache[key]
     except KeyError:
-        return '404 Not found'
-    return '200 OK'
+        return Response("", status=404)
+    return Response("", status=200)
 
 
 @app.route("/object/<int:key>", methods=['POST', 'PUT'])
@@ -57,12 +57,12 @@ def object_create(key):
         ttl = -1 if t is '' else int(t)
         value = json.dumps(json.loads(request.get_data()))
     except ValueError as e:
-        return '400 Bad Request'
+        return Response("", status=400)
     try:
         cache.__setitem__(key, value, ttl)
-    except ValueError:
-        return '507 insuficient storage'
-    return '200 OK'
+    except KeyError:
+        return Response("", status=507)
+    return Response("", status=200)
 
 if __name__ == '__main__':
     app.run()
